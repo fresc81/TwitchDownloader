@@ -12,5 +12,9 @@ namespace TwitchDownloaderCore.Options
 
         public string ChannelId { get; set; }
 
+        public DateTime StartTime { get; set; }
+
+        public DateTime EndTime { get; set; }
+
     }
 }

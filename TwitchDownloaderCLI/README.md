@@ -5,12 +5,13 @@ A cross platform command line tool that can do the main functions of the GUI pro
  - [Arguments for mode VideoDownload](#arguments-for-mode-videodownload)
  - [Arguments for mode ClipDownload](#arguments-for-mode-clipdownload)
  - [Arguments for mode ChatDownload](#arguments-for-mode-chatdownload)
+ - [Arguments for mode ChatConvert](#arguments-for-mode-chatconvert)
  - [Arguments for mode ChatRender](#arguments-for-mode-chatrender)
  - [Example Commands](#example-commands)
 
 ## Global Arguments
 **-m/-\-mode (REQUIRED)**
-Set the run mode for the program. Valid values are **VideoDownload**, **ClipDownload**, **ChatDownload**, and **ChatRender**.
+Set the run mode for the program. Valid values are **VideoDownload**, **ClipDownload**, **ChatDownload**, **ChatConvert** and **ChatRender**.
 
 **-o/-\-output (REQUIRED)**
 File the program will output to.
@@ -66,6 +67,21 @@ If downloading to a text file, will add timestamps before each message.
 
 **-\-embed-emotes**
 Embeds emotes into the JSON file so in the future when an emote is removed from Twitch or a 3rd party, it will still render correctly. Useful for archival purposes, file size will be larger.
+## Arguments for mode ChatConvert
+**-u/-\-id**
+The User ID of the streamer in the database.
+
+**-i/-\-input**
+Path to the SQLite database file.
+
+**-o/-\-output**
+Path to JSON chat file output.
+
+**-s/-\-start**
+Start time.
+
+**-x/-\-end**
+End time.
 ## Arguments for mode ChatRender
 **-i/-\-input**
 Path to JSON chat file input.

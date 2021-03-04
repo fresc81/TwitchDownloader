@@ -34,6 +34,10 @@ namespace TwitchDownloaderCLI
         public int CropBeginningTime { get; set; }
         [Option('e', "ending", HelpText = "Time in seconds to crop ending.")]
         public int CropEndingTime { get; set; }
+        [Option('s', "start", HelpText = "Start time.")]
+        public DateTime StartTime { get; set; }
+        [Option('x', "end", HelpText = "End time.")]
+        public DateTime EndTime { get; set; }
         [Option('t', "threads", HelpText = "Number of download threads.", Default = 10)]
         public int DownloadThreads { get; set; }
         [Option("oauth", HelpText = "OAuth to be passed when downloading a VOD.")]

@@ -1,7 +1,7 @@
 SELECT 
 	messageId,
 	timepoint,
-	timepoint - LAG(timepoint) OVER (ORDER BY timepoint) AS offsetTimepoint,
+	(timepoint - LAG(timepoint) OVER (ORDER BY timepoint)) / 1000000.0 AS offsetTimepoint,
 	(SELECT CAST(value AS INTEGER) FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'tmi-sent-ts') AS tmiSent,
 
 	message.userId AS userId,
@@ -25,6 +25,6 @@ FROM
 	message,
 		user ON message.userId == user.userId
 WHERE
-	roomId == ?
+	roomId == ? AND timepoint >= ? AND timepoint <= ?
 ORDER BY
 	timepoint

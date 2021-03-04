@@ -84,7 +84,9 @@ namespace TwitchDownloaderCLI
             {
                 ChannelId = inputOptions.Id,
                 InputFile = inputOptions.InputFile,
-                OutputFile = inputOptions.OutputFile
+                OutputFile = inputOptions.OutputFile,
+                StartTime = inputOptions.StartTime,
+                EndTime = inputOptions.EndTime
             };
 
             ChatConverter chatConverter = new ChatConverter(converterOptions);
