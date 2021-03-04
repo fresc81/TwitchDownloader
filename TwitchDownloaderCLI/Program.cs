@@ -65,7 +65,32 @@ namespace TwitchDownloaderCLI
                 case RunMode.ChatRender:
                     RenderChat(inputOptions);
                     break;
+                // added custom mode
+                case RunMode.ChatConvert:
+                    ChatConvert(inputOptions);
+                    break;
             }
+        }
+
+        private static void ChatConvert(Options inputOptions)
+        {
+            if (inputOptions.Id == "" || !inputOptions.Id.All(Char.IsDigit))
+            {
+                Console.WriteLine("[ERROR] - Invalid Channel ID, unable to parse. Must be only numbers.");
+                Environment.Exit(1);
+            }
+
+            ChatConverterOptions converterOptions = new ChatConverterOptions
+            {
+                ChannelId = inputOptions.Id,
+                InputFile = inputOptions.InputFile,
+                OutputFile = inputOptions.OutputFile
+            };
+
+            ChatConverter chatConverter = new ChatConverter(converterOptions);
+            Progress<ProgressReport> progress = new Progress<ProgressReport>();
+            progress.ProgressChanged += Progress_ProgressChanged;
+            chatConverter.ConvertAsync(progress, new CancellationToken()).Wait();
         }
 
         private static void DownloadVideo(Options inputOptions)

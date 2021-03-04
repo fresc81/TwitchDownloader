@@ -10,12 +10,17 @@ namespace TwitchDownloaderCLI
         VideoDownload,
         ClipDownload,
         ChatDownload,
-        ChatRender
+        ChatRender,
+        // custom mode for converting captured chat in SQLite database to the TwitchDownloader JSON format
+        // uses id (-u, numeric channel ID),
+        // input (-i, SQLite3 database filename) and
+        // output (-o, path to JSON file) arguments for now
+        ChatConvert
     }
 
     class Options
     {
-        [Option('m', "mode", Required = true, HelpText = "Set the run mode for the program. Valid values are VideoDownload, ClipDownload, ChatDownload, and ChatRender.")]
+        [Option('m', "mode", Required = true, HelpText = "Set the run mode for the program. Valid values are VideoDownload, ClipDownload, ChatDownload, ChatRender and ChatConvert.")]
         public RunMode RunMode { get; set; }
         [Option('u', "id", HelpText = "The ID of the VOD or clip to download.")]
         public string Id { get; set; }
