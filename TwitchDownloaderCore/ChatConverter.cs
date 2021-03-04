@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Data.SQLite;
 using System.Data.SQLite.Generic;
 using TwitchDownloaderCore.Options;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace TwitchDownloaderCore
 {
@@ -20,46 +22,127 @@ namespace TwitchDownloaderCore
 
         public async Task ConvertAsync(IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
-            // run conversion process asynchronously...
+            progress.Report(new ProgressReport { reportType = ReportType.Message, data = $"'{converterOptions.InputFile}' -> '{converterOptions.OutputFile}'" });
+
+            // TODO provide start time and duration...
+
+
+            // create SQL connection string...
+            SQLiteConnectionStringBuilder connectionStringBuilder = new SQLiteConnectionStringBuilder
+            {
+                DataSource = converterOptions.InputFile,
+                ForeignKeys = true,
+                ReadOnly = true
+            };
+
+            // open database asynchronously...
+            SQLiteConnection connection = new SQLiteConnection(connectionStringBuilder.ToString());
+            await connection.OpenAsync(cancellationToken);
+
             try
             {
+                int channelId = int.Parse(converterOptions.ChannelId);
 
-                progress.Report(new ProgressReport { reportType = ReportType.Message, data = $"'{converterOptions.InputFile}' -> '{converterOptions.OutputFile}'" });
-
-                SQLiteConnectionStringBuilder connectionStringBuilder = new SQLiteConnectionStringBuilder
+                // prepare output JSON structure...
+                List<Comment> comments = new List<Comment>();
+                ChatRoot chatRoot = new ChatRoot
                 {
-                    DataSource = converterOptions.InputFile,
-                    ForeignKeys = true,
-                    ReadOnly = true
+                    streamer = new Streamer
+                    {
+                        id = channelId,
+                        name = await Data.Query.GetStreamerNameFromId(connection, channelId, cancellationToken)
+                    },
+                    video = new VideoTime(),
+                    comments = comments
                 };
 
-                SQLiteConnection connection = new SQLiteConnection(connectionStringBuilder.ToString());
-                await connection.OpenAsync(cancellationToken);
-
-                SQLiteCommand command = connection.CreateCommand();
-                command.CommandText = "SELECT messageId FROM message, user ON message.userId == user.userId LIMIT 10";
-
-                SQLiteDataReader dataReader = await command.ExecuteReaderAsync(cancellationToken) as SQLiteDataReader;
-
-                while (dataReader.Read())
+                // iterate messages from SQLite database...
+                SQLiteDataReader messageReader = await Data.Query.OpenMessageReader(connection, channelId, cancellationToken);
+                while (await messageReader.ReadAsync(cancellationToken))
                 {
-                    progress.Report(new ProgressReport { reportType = ReportType.Message, data = dataReader.GetFieldValue<string>(0) });
+                    int c = 0;
+                    string messageId = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+
+                    long timepoint = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+                    long offsetTimepoint = await messageReader.IsDBNullAsync(c, cancellationToken) ? 0 : await messageReader.GetFieldValueAsync<long>(c, cancellationToken); ++c;
+
+                    long tmiSent = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+
+                    long userId = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+                    string nickname = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    string displayName = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    string color = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    
+                    long mod = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+                    long subscriber = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+                    long turbo = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+
+                    string badgeInfo = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    string badges = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    string emotes = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+
+                    long roomId = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
+                    string target = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    string text = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+
+                    // add message...
+                    Comment comment = new Comment
+                    {
+                        channel_id = roomId.ToString(),
+                        commenter = new Commenter { display_name = displayName.ToString(), name = nickname.ToString(), _id = userId.ToString(), type = "user" },
+                        content_id = messageId.ToString(),
+                        // integer based division followed by double based division
+                        // gets rid of some unnessesary decimal places due the database storing microsecond precision
+                        content_offset_seconds = offsetTimepoint / 1000 / 1000.0,
+                        content_type = "video",
+                        created_at = DateTime.FromBinary(tmiSent),
+                        updated_at = DateTime.FromBinary(tmiSent),
+                        source = "chat",
+                        state = "published",
+                        message = new Message
+                        {
+                            bits_spent = 0,
+                            body = text.ToString(),
+                            emoticons = new List<Emoticon2>(), // TODO implement
+                            fragments = new List<Fragment> { new Fragment { text = text.ToString() } }, // TODO implement
+                            is_action = false,
+                            user_badges = new List<UserBadge>(), // TODO implement
+                            user_color = color == "" ? "#FFFFFF" : color
+                        },
+                        _id = messageId
+                    };
+                    comments.Add(comment);
+
+                    // report for UI (not yet implemented)
+                    // progress.Report(new ProgressReport { reportType = ReportType.Percent, data = messageReader.StepCount / 429438 * 100 /* percent */ });
+
+                    chatRoot.video.end += comment.content_offset_seconds;
+                    if (chatRoot.video.end > 3600.0)
+                    {
+                        break;
+                    }
                 }
-                dataReader.Close();
 
-                connection.Close();
+                messageReader.Close();
 
-            } catch
-            {
-
-                throw;
-
-            } finally
-            {
-
-                GC.Collect();
-
+                // write JSON file...
+                using (TextWriter writer = File.CreateText(converterOptions.OutputFile))
+                {
+                    var serializer = new JsonSerializer();
+                    serializer.Serialize(writer, chatRoot);
+                }
             }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                // close connection...
+                connection.Close();
+                GC.Collect();
+            }
+
         }
     }
 }

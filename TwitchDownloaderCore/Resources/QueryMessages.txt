@@ -1,0 +1,30 @@
+SELECT 
+	messageId,
+	timepoint,
+	timepoint - LAG(timepoint) OVER (ORDER BY timepoint) AS offsetTimepoint,
+	(SELECT CAST(value AS INTEGER) FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'tmi-sent-ts') AS tmiSent,
+
+	message.userId AS userId,
+	nickname,
+	(SELECT value FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'display-name') AS displayName,
+	(SELECT value FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'color') AS color,
+
+	(SELECT CAST(value AS INTEGER) FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'mod') AS mod,
+	(SELECT CAST(value AS INTEGER) FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'subscriber') AS sub,
+	(SELECT CAST(value AS INTEGER) FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'turbo') AS turbo,
+
+	(SELECT value FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'badge-info') AS badgeInfo,
+	(SELECT value FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'badges') AS badges,
+	(SELECT value FROM tag WHERE tag.messageId == message.messageId AND tag.key == 'emotes') AS emotes,
+
+	roomId,
+	target,
+	text
+	
+FROM
+	message,
+		user ON message.userId == user.userId
+WHERE
+	roomId == ?
+ORDER BY
+	timepoint
