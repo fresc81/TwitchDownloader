@@ -9,6 +9,9 @@ using TwitchDownloaderCore.Options;
 using System.IO;
 using Newtonsoft.Json;
 using TwitchDownloaderCore.Data;
+using TwitchDownloaderCore.TwitchObjects;
+using SkiaSharp;
+using System.Linq;
 
 namespace TwitchDownloaderCore
 {
@@ -51,7 +54,7 @@ namespace TwitchDownloaderCore
                     streamer = new Streamer
                     {
                         id = channelId,
-                        name = await Data.Query.GetStreamerNameFromId(connection, channelId, cancellationToken)
+                        name = await Query.GetStreamerNameFromId(connection, channelId, cancellationToken)
                     },
                     video = new VideoTime
                     {
@@ -63,7 +66,7 @@ namespace TwitchDownloaderCore
 
                 // iterate messages from SQLite database...
                 double currentTimeOffset = 0.0;
-                SQLiteDataReader messageReader = await Data.Query.OpenMessageReader(connection, channelId, converterOptions.StartTime, converterOptions.EndTime, cancellationToken);
+                SQLiteDataReader messageReader = await Query.OpenMessageReader(connection, channelId, converterOptions.StartTime, converterOptions.EndTime, cancellationToken);
                 while (await messageReader.ReadAsync(cancellationToken))
                 {
                     int c = 0;
@@ -92,11 +95,15 @@ namespace TwitchDownloaderCore
                         string[] badgeParts = badge.Split('/');
                         userBadges.Add(new UserBadge { _id = badgeParts[0], version = badgeParts.Length > 1 ? badgeParts[1] : "" });
                     }
+                    
                     string emotes = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                    List<Emoticon2> userEmotes = GetEmoticons(emotes);
 
                     long roomId = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
                     string target = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
                     string text = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+
+                    List<Fragment> messageFragments = GetMessageFragments(text, userEmotes);
 
                     currentTimeOffset += offsetTimepoint;
 
@@ -118,8 +125,8 @@ namespace TwitchDownloaderCore
                         {
                             bits_spent = 0,
                             body = text.ToString(),
-                            emoticons = new List<Emoticon2>(), // TODO implement
-                            fragments = new List<Fragment> { new Fragment { text = text.ToString() } }, // TODO implement
+                            emoticons = userEmotes,
+                            fragments = messageFragments,
                             is_action = false,
                             user_badges = userBadges,
                             user_color = color == "" ? "#FFFFFF" : color
@@ -139,6 +146,42 @@ namespace TwitchDownloaderCore
 
                 messageReader.Close();
 
+                chatRoot.emotes = new Emotes();
+                List<FirstPartyEmoteData> firstParty = new List<FirstPartyEmoteData>();
+                List<ThirdPartyEmoteData> thirdParty = new List<ThirdPartyEmoteData>();
+
+                string cacheFolder = Path.Combine(Path.GetTempPath(), "TwitchDownloader", "cache");
+                List<ThirdPartyEmote> thirdPartyEmotes = new List<ThirdPartyEmote>();
+                List<KeyValuePair<string, SKBitmap>> firstPartyEmotes = new List<KeyValuePair<string, SKBitmap>>();
+
+                await Task.Run(() => {
+                    thirdPartyEmotes = TwitchHelper.GetThirdPartyEmotes(chatRoot.streamer.id, cacheFolder);
+                    firstPartyEmotes = TwitchHelper.GetEmotes(comments, cacheFolder, null, true).ToList();
+                });
+
+                foreach (ThirdPartyEmote emote in thirdPartyEmotes)
+                {
+                    ThirdPartyEmoteData newEmote = new ThirdPartyEmoteData();
+                    newEmote.id = emote.id;
+                    newEmote.imageScale = emote.imageScale;
+                    newEmote.data = emote.imageData;
+                    newEmote.name = emote.name;
+                    thirdParty.Add(newEmote);
+                }
+
+                foreach (KeyValuePair<string, SKBitmap> emote in firstPartyEmotes)
+                {
+                    FirstPartyEmoteData newEmote = new FirstPartyEmoteData();
+                    newEmote.id = emote.Key;
+                    newEmote.imageScale = 1;
+                    newEmote.data = SKImage.FromBitmap(emote.Value).Encode(SKEncodedImageFormat.Png, 100).ToArray();
+                    firstParty.Add(newEmote);
+                }
+
+                chatRoot.emotes.thirdParty = thirdParty;
+                chatRoot.emotes.firstParty = firstParty;
+
+
                 // write JSON file...
                 using (TextWriter writer = File.CreateText(converterOptions.OutputFile))
                 {
@@ -157,6 +200,56 @@ namespace TwitchDownloaderCore
                 GC.Collect();
             }
 
+        }
+
+        private static List<Emoticon2> GetEmoticons(string emotes)
+        {
+            List<Emoticon2> userEmotes = new List<Emoticon2>();
+            foreach (string emote in emotes.Split('/'))
+            {
+                if (emote.Trim().Length > 0)
+                {
+                    string[] emoteParts = emote.Split(':', '-', ',');
+                    string emoteIdPart = emoteParts[0];
+                    for (int i = 1; i < emoteParts.Length; i+=2)
+                    {
+                        int emoteStart = int.Parse(emoteParts[i]);
+                        int emoteEnd = int.Parse(emoteParts[i+1]);
+                        userEmotes.Add(new Emoticon2 { _id = emoteIdPart, begin = emoteStart, end = emoteEnd });
+                    }
+                }
+            }
+            return userEmotes;
+        }
+
+        private static List<Fragment> GetMessageFragments(string text, List<Emoticon2> emoticons)
+        {
+            List<Fragment> fragments = new List<Fragment>();
+
+            int lastFragmentStart = 0;
+            emoticons.ForEach(emoticon =>
+            {
+                bool isBegin = lastFragmentStart == 0;
+                if (!isBegin)
+                {
+                    int fragmentStart = lastFragmentStart;
+                    int fragmentEnd = emoticon.begin;
+                    int fragmentLength = Math.Max(fragmentEnd - fragmentStart, 0);
+                    fragments.Add(new Fragment { text = text.Substring(fragmentStart, fragmentLength) });
+                }
+
+                fragments.Add(new Fragment { text = text.Substring(emoticon.begin, emoticon.end - emoticon.begin + 1), emoticon = new Emoticon { emoticon_id = emoticon._id, emoticon_set_id = "" } });
+
+                lastFragmentStart = emoticon.end + 1;
+            });
+
+            string rest = text.Substring(lastFragmentStart);
+            if (rest.Length > 0)
+            {
+                fragments.Add(new Fragment { text = rest });
+            }
+
+            return fragments;
         }
     }
 }
