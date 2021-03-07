@@ -28,9 +28,6 @@ namespace TwitchDownloaderCore
         {
             progress.Report(new ProgressReport { reportType = ReportType.Message, data = $"'{converterOptions.InputFile}' -> '{converterOptions.OutputFile}'" });
 
-            // TODO provide start time and duration...
-
-
             // create SQL connection string...
             SQLiteConnectionStringBuilder connectionStringBuilder = new SQLiteConnectionStringBuilder
             {
@@ -64,87 +61,110 @@ namespace TwitchDownloaderCore
                     comments = comments
                 };
 
+                progress.Report(new ProgressReport { reportType = ReportType.Log, data = $"Crunching {chatRoot.video.end} seconds of data..." });
+
                 // iterate messages from SQLite database...
+
+                double lastPercent = 0.0;
+                progress.Report(new ProgressReport { reportType = ReportType.Percent, data = lastPercent });
+
                 double currentTimeOffset = 0.0;
                 SQLiteDataReader messageReader = await Query.OpenMessageReader(connection, channelId, converterOptions.StartTime, converterOptions.EndTime, cancellationToken);
+
                 while (await messageReader.ReadAsync(cancellationToken))
                 {
-                    int c = 0;
-                    string messageId = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-
-                    long timepoint = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-                    double offsetTimepoint = await messageReader.IsDBNullAsync(c, cancellationToken) ? 0 : await messageReader.GetFieldValueAsync<double>(c, cancellationToken); ++c;
-
-                    long tmiSent = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-
-                    long userId = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-                    string nickname = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-                    string displayName = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-                    string color = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-                    
-                    long mod = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-                    long subscriber = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-                    long turbo = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-
-                    string badgeInfo = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-                    string badges = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-
-                    List<UserBadge> userBadges = new List<UserBadge>();
-                    foreach (string badge in badges.Split(','))
+                    try
                     {
-                        string[] badgeParts = badge.Split('/');
-                        userBadges.Add(new UserBadge { _id = badgeParts[0], version = badgeParts.Length > 1 ? badgeParts[1] : "" });
-                    }
-                    
-                    string emotes = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-                    List<Emoticon2> userEmotes = GetEmoticons(emotes);
+                        int c = 0;
+                        string messageId = messageReader.GetString(c++);
 
-                    long roomId = await messageReader.GetFieldValueAsync<long>(c++, cancellationToken);
-                    string target = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
-                    string text = await messageReader.GetFieldValueAsync<string>(c++, cancellationToken);
+                        long timepoint = messageReader.GetInt64(c++);
+                        double offsetTimepoint = messageReader.IsDBNull(c) ? 0 : messageReader.GetDouble(c); ++c;
 
-                    List<Fragment> messageFragments = GetMessageFragments(text, userEmotes);
+                        long tmiSent = messageReader.GetInt64(c++);
 
-                    currentTimeOffset += offsetTimepoint;
+                        long userId = messageReader.GetInt64(c++);
+                        string nickname = messageReader.GetString(c++);
+                        string displayName = messageReader.GetString(c++);
+                        string color = messageReader.GetString(c++);
 
-                    // add message...
-                    Comment comment = new Comment
-                    {
-                        channel_id = roomId.ToString(),
-                        commenter = new Commenter { display_name = displayName.ToString(), name = nickname.ToString(), _id = userId.ToString(), type = "user" },
-                        content_id = messageId.ToString(),
-                        // integer based division followed by double based division
-                        // gets rid of some unnessesary decimal places due the database storing microsecond precision
-                        content_offset_seconds = currentTimeOffset,
-                        content_type = "video",
-                        created_at = Query.FromEpoch(tmiSent / 1000),
-                        updated_at = Query.FromEpoch(tmiSent / 1000),
-                        source = "chat",
-                        state = "published",
-                        message = new Message
+                        long mod = messageReader.GetInt64(c++);
+                        long subscriber = messageReader.GetInt64(c++);
+                        long turbo = messageReader.GetInt64(c++);
+
+                        string badgeInfo = messageReader.GetString(c++);
+                        string badges = messageReader.GetString(c++);
+
+                        List<UserBadge> userBadges = new List<UserBadge>();
+                        foreach (string badge in badges.Split(','))
                         {
-                            bits_spent = 0,
-                            body = text.ToString(),
-                            emoticons = userEmotes,
-                            fragments = messageFragments,
-                            is_action = false,
-                            user_badges = userBadges,
-                            user_color = color == "" ? "#FFFFFF" : color
-                        },
-                        _id = messageId
-                    };
-                    comments.Add(comment);
+                            string[] badgeParts = badge.Split('/');
+                            userBadges.Add(new UserBadge { _id = badgeParts[0], version = badgeParts.Length > 1 ? badgeParts[1] : "" });
+                        }
 
-                    // report for UI (not yet implemented)
-                    // progress.Report(new ProgressReport { reportType = ReportType.Percent, data = messageReader.StepCount / 429438 * 100 /* percent */ });
+                        string emotes = messageReader.GetString(c++);
+                        List<Emoticon2> userEmotes = GetEmoticons(emotes);
 
-                    if (Query.FromEpoch(timepoint / 1000000L) > converterOptions.EndTime)
+                        long roomId = messageReader.GetInt64(c++);
+                        string target = messageReader.GetString(c++);
+                        string text = messageReader.GetString(c++);
+
+                        List<Fragment> messageFragments = GetMessageFragments(text, userEmotes);
+
+                        currentTimeOffset += offsetTimepoint;
+
+                        // add message...
+                        Comment comment = new Comment
+                        {
+                            channel_id = roomId.ToString(),
+                            commenter = new Commenter { display_name = displayName.ToString(), name = nickname.ToString(), _id = userId.ToString(), type = "user" },
+                            content_id = messageId.ToString(),
+                            // integer based division followed by double based division
+                            // gets rid of some unnessesary decimal places due the database storing microsecond precision
+                            content_offset_seconds = currentTimeOffset,
+                            content_type = "video",
+                            created_at = Query.FromEpoch(tmiSent / 1000),
+                            updated_at = Query.FromEpoch(tmiSent / 1000),
+                            source = "chat",
+                            state = "published",
+                            message = new Message
+                            {
+                                bits_spent = 0,
+                                body = text.ToString(),
+                                emoticons = userEmotes,
+                                fragments = messageFragments,
+                                is_action = false,
+                                user_badges = userBadges,
+                                user_color = color == "" ? "#FFFFFF" : color
+                            },
+                            _id = messageId
+                        };
+                        comments.Add(comment);
+
+                        // report for UI (not yet implemented)
+                        double currentPercent = Math.Floor(currentTimeOffset / chatRoot.video.end * 100.0);
+                        if (currentPercent > lastPercent)
+                        {
+                            progress.Report(new ProgressReport { reportType = ReportType.Percent, data = currentPercent });
+                            lastPercent = currentPercent;
+                        }
+
+                        if (Query.FromEpoch(timepoint / 1000000L) > converterOptions.EndTime)
+                        {
+                            break;
+                        }
+
+                    } catch (Exception ex)
                     {
-                        break;
+
+                        progress.Report(new ProgressReport { reportType = ReportType.Log, data = $"ERROR: {ex.Message}\n{ex.StackTrace}" });
+
                     }
                 }
 
                 messageReader.Close();
+
+                progress.Report(new ProgressReport { reportType = ReportType.Log, data = $"Preparing emotes for {comments.Count} messages..." });
 
                 chatRoot.emotes = new Emotes();
                 List<FirstPartyEmoteData> firstParty = new List<FirstPartyEmoteData>();
@@ -181,13 +201,20 @@ namespace TwitchDownloaderCore
                 chatRoot.emotes.thirdParty = thirdParty;
                 chatRoot.emotes.firstParty = firstParty;
 
+                progress.Report(new ProgressReport { reportType = ReportType.Log, data = $"Writing JSON file to disk..." });
 
                 // write JSON file...
                 using (TextWriter writer = File.CreateText(converterOptions.OutputFile))
                 {
                     var serializer = new JsonSerializer();
+                    serializer.StringEscapeHandling = StringEscapeHandling.EscapeNonAscii;
+                    serializer.Error += (object sender, Newtonsoft.Json.Serialization.ErrorEventArgs e) =>
+                    {
+                        progress.Report(new ProgressReport { reportType = ReportType.Log, data = $"ERROR: {e.ErrorContext.Path}\n{e.ErrorContext.Error.Message}\n{e.ErrorContext.Error.StackTrace}" });
+                    };
                     serializer.Serialize(writer, chatRoot);
                 }
+
             }
             catch
             {
