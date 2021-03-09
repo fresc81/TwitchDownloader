@@ -307,7 +307,7 @@ namespace TwitchDownloaderCLI
             batchComposerOptions.UpdateRate = inputOptions.UpdateRate;
             batchComposerOptions.PaddingLeft = inputOptions.PaddingLeft;
             batchComposerOptions.Framerate = inputOptions.Framerate;
-            batchComposerOptions.GenerateMask = inputOptions.GenerateMask;
+            batchComposerOptions.GenerateMask = true;
             batchComposerOptions.InputArgs = inputOptions.InputArgs;
             batchComposerOptions.OutputArgs = inputOptions.OutputArgs;
             batchComposerOptions.SubMessages = inputOptions.SubMessages;
