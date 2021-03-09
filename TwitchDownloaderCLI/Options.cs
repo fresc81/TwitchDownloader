@@ -10,12 +10,13 @@ namespace TwitchDownloaderCLI
         VideoDownload,
         ClipDownload,
         ChatDownload,
-        ChatRender
+        ChatRender,
+        BatchCompose
     }
 
     class Options
     {
-        [Option('m', "mode", Required = true, HelpText = "Set the run mode for the program. Valid values are VideoDownload, ClipDownload, ChatDownload, and ChatRender.")]
+        [Option('m', "mode", Required = true, HelpText = "Set the run mode for the program. Valid values are VideoDownload, ClipDownload, ChatDownload, ChatRender and BatchCompose.")]
         public RunMode RunMode { get; set; }
         [Option('u', "id", HelpText = "The ID of the VOD or clip to download.")]
         public string Id { get; set; }
@@ -45,6 +46,14 @@ namespace TwitchDownloaderCLI
         public int ChatHeight { get; set; }
         [Option('w', "chat-width", Default = 350, HelpText = "Width of chat render.")]
         public int ChatWidth { get; set; }
+        [Option('x', "chat-pos-x", Default = 10, HelpText = "Position of chat on composition.")]
+        public int ChatPosLeft { get; set; }
+        [Option('y', "chat-pos-y", Default = 10, HelpText = "Position of chat on composition.")]
+        public int ChatPosTop { get; set; }
+        [Option("border-image", HelpText = "Path to a transparent PNG image used as border for caging chat.")]
+        public string ChatBorderImage { get; set; }
+        [Option("background-image", HelpText = "Path to a transparent PNG image used as background for chat.")]
+        public string ChatBackgroundImage { get; set; }
         [Option("bttv", Default = true, HelpText = "Enable BTTV emotes in chat render.")]
         public bool BttvEmotes { get; set; }
         [Option("ffz", Default = true, HelpText = "Enable FFZ emotes in chat render.")]
@@ -75,6 +84,8 @@ namespace TwitchDownloaderCLI
         public string InputArgs { get; set; }
         [Option("output-args", Default = "-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p \"{save_path}\"", HelpText = "Output arguments for ffmpeg chat render.")]
         public string OutputArgs { get; set; }
+        [Option("composer-args", Default = "-i \"{video}\" -i \"{chat}\" -i \"{chat_mask}\" -i \"{border}\" -i \"{background}\" -map 0:a -c:a copy -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -filter_complex \"[1:v][2:v]alphamerge,pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[chat];[4:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[background];[0:v][background]overlay[pre];[pre][chat]overlay[video];[3:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[border];[video][border]overlay\" -y \"{save_path}\"", HelpText = "Arguments for ffmpeg batch composition.")]
+        public string ComposerArgs { get; set; }
         [Option("download-ffmpeg", Required = false, HelpText = "Downloads ffmpeg and exits.")]
         public bool DownloadFfmpeg { get; set; }
         [Option("ffmpeg-path", HelpText = "Path to ffmpeg executable.")]

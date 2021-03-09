@@ -65,6 +65,9 @@ namespace TwitchDownloaderCLI
                 case RunMode.ChatRender:
                     RenderChat(inputOptions);
                     break;
+                case RunMode.BatchCompose:
+                    BatchCompose(inputOptions);
+                    break;
             }
         }
 
@@ -236,6 +239,89 @@ namespace TwitchDownloaderCLI
             Progress<ProgressReport> progress = new Progress<ProgressReport>();
             progress.ProgressChanged += Progress_ProgressChanged;
             chatDownloader.RenderVideoAsync(progress, new CancellationToken()).Wait();
+        }
+
+        private static void BatchCompose(Options inputOptions)
+        {
+            BatchComposerOptions batchComposerOptions = new BatchComposerOptions();
+
+            if (inputOptions.Id == "")
+            {
+                Console.WriteLine("[ERROR] - Invalid VOD ID, unable to parse.");
+                Environment.Exit(1);
+            }
+
+            batchComposerOptions.DownloadThreads = inputOptions.DownloadThreads;
+            batchComposerOptions.Id = inputOptions.Id;
+            batchComposerOptions.Oauth = inputOptions.Oauth;
+            batchComposerOptions.Filename = inputOptions.OutputFile;
+            batchComposerOptions.Quality = inputOptions.Quality;
+            batchComposerOptions.CropBeginning = inputOptions.CropBeginningTime == 0.0 ? false : true;
+            batchComposerOptions.CropBeginningTime = inputOptions.CropBeginningTime;
+            batchComposerOptions.CropEnding = inputOptions.CropEndingTime == 0.0 ? false : true;
+            batchComposerOptions.CropEndingTime = inputOptions.CropEndingTime;
+            batchComposerOptions.FfmpegPath = inputOptions.FfmpegPath == null || inputOptions.FfmpegPath == "" ? ffmpegPath : Path.GetFullPath(inputOptions.FfmpegPath);
+            batchComposerOptions.TempFolder = inputOptions.TempFolder;
+
+            batchComposerOptions.Timestamp = inputOptions.Timestamp;
+
+            batchComposerOptions.InputFile = inputOptions.InputFile;
+            batchComposerOptions.OutputFile = inputOptions.OutputFile;
+            batchComposerOptions.BackgroundColor = SKColor.Parse(inputOptions.BackgroundColor);
+            batchComposerOptions.MessageColor = SKColor.Parse(inputOptions.MessageColor);
+            batchComposerOptions.ChatHeight = inputOptions.ChatHeight;
+            batchComposerOptions.ChatWidth = inputOptions.ChatWidth;
+            batchComposerOptions.BttvEmotes = inputOptions.BttvEmotes;
+            batchComposerOptions.FfzEmotes = inputOptions.FfzEmotes;
+            batchComposerOptions.Outline = inputOptions.Outline;
+            batchComposerOptions.OutlineSize = inputOptions.OutlineSize;
+            batchComposerOptions.Font = inputOptions.Font;
+            batchComposerOptions.FontSize = inputOptions.FontSize;
+
+            switch (inputOptions.MessageFontStyle.ToLower())
+            {
+                case "normal":
+                    batchComposerOptions.MessageFontStyle = SKFontStyle.Normal;
+                    break;
+                case "bold":
+                    batchComposerOptions.MessageFontStyle = SKFontStyle.Bold;
+                    break;
+                case "italic":
+                    batchComposerOptions.MessageFontStyle = SKFontStyle.Italic;
+                    break;
+            }
+
+            switch (inputOptions.UsernameFontStyle.ToLower())
+            {
+                case "normal":
+                    batchComposerOptions.UsernameFontStyle = SKFontStyle.Normal;
+                    break;
+                case "bold":
+                    batchComposerOptions.UsernameFontStyle = SKFontStyle.Bold;
+                    break;
+                case "italic":
+                    batchComposerOptions.UsernameFontStyle = SKFontStyle.Italic;
+                    break;
+            }
+
+            batchComposerOptions.UpdateRate = inputOptions.UpdateRate;
+            batchComposerOptions.PaddingLeft = inputOptions.PaddingLeft;
+            batchComposerOptions.Framerate = inputOptions.Framerate;
+            batchComposerOptions.GenerateMask = inputOptions.GenerateMask;
+            batchComposerOptions.InputArgs = inputOptions.InputArgs;
+            batchComposerOptions.OutputArgs = inputOptions.OutputArgs;
+            batchComposerOptions.SubMessages = inputOptions.SubMessages;
+
+            batchComposerOptions.ChatBorderImage = inputOptions.ChatBorderImage;
+            batchComposerOptions.ChatBackgroundImage = inputOptions.ChatBackgroundImage;
+            batchComposerOptions.ComposerArgs = inputOptions.ComposerArgs;
+            batchComposerOptions.ChatPosLeft = inputOptions.ChatPosLeft;
+            batchComposerOptions.ChatPosTop = inputOptions.ChatPosTop;
+
+            BatchComposer batchComposer = new BatchComposer(batchComposerOptions);
+            Progress<ProgressReport> progress = new Progress<ProgressReport>();
+            progress.ProgressChanged += Progress_ProgressChanged;
+            batchComposer.ComposeAsync(progress, new CancellationToken()).Wait();
         }
 
         private static void Progress_ProgressChanged(object sender, ProgressReport e)
