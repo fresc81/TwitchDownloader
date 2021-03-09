@@ -10,7 +10,7 @@ A cross platform command line tool that can do the main functions of the GUI pro
 
 ## Global Arguments
 **-m/-\-mode (REQUIRED)**
-Set the run mode for the program. Valid values are **VideoDownload**, **ClipDownload**, **ChatDownload**, and **ChatRender**.
+Set the run mode for the program. Valid values are **VideoDownload**, **ClipDownload**, **ChatDownload**, **ChatRender** or **BatchCompose**.
 
 **-o/-\-output (REQUIRED)**
 File the program will output to.
@@ -129,6 +129,26 @@ Generates a mask file in addition to the regular chat file.
 
 **-\-output-args**
 (Default: -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p "{save_path}") Output arguments for ffmpeg chat render.
+## Arguments for mode BatchCompose
+**BatchCompose** accepts all of the previous arguments in addition to these.
+
+**-x/-\-chat-pos-x**
+Position of chat on composition.
+
+**-y/-\-chat-pos-y**
+Position of chat on composition.
+
+**-\-border-image**
+Path to a transparent PNG image used as border for caging chat. This image is drawn above chat.
+
+**-\-background-image**
+Path to a transparent PNG image used as background for chat. This image is drawn below chat.
+
+**-\-composer-args**
+Arguments for ffmpeg batch composition.
+Default:
+
+    -i "{video}" -i "{chat}" -i "{chat_mask}" -i "{border}" -i "{background}" -map 0:a -c:a copy -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -filter_complex "[1:v][2:v]alphamerge,pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[chat];[4:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[background];[0:v][background]overlay[pre];[pre][chat]overlay[video];[3:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[border];[video][border]overlay" -y "{save_path}"
 ## Example Commands
 Download a VOD
 
@@ -148,3 +168,6 @@ Render a chat with defaults
 Render a chat with different heights and values
 
     TwitchDownloaderCLI -m ChatRender -i chat.json -h 1440 -w 720 --framerate 60 --outline -o chat.mp4
+Do everything all together
+
+    TwitchDownloaderCLI -m BatchCompose -u InspiringSecretiveRabbitOMGScoots-SA3PG_d9MMVXGeqY --border-image border_wood_fg.png --background-image border_wood_bg.png -o ready4youtube.mp4 --embed-emotes --background-color #00000000 -h 550 -w 350 -x 50 -y 40 --bttv --ffz --outline --outline-size 3 --padding-left 20 -f "Segoe UI Emoji" --font-size 14 --framerate 60
