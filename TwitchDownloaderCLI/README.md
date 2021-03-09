@@ -6,6 +6,7 @@ A cross platform command line tool that can do the main functions of the GUI pro
  - [Arguments for mode ClipDownload](#arguments-for-mode-clipdownload)
  - [Arguments for mode ChatDownload](#arguments-for-mode-chatdownload)
  - [Arguments for mode ChatRender](#arguments-for-mode-chatrender)
+ - [Arguments for mode BatchCompose](#arguments-for-mode-batchcompose)
  - [Example Commands](#example-commands)
 
 ## Global Arguments
