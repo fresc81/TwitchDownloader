@@ -1,0 +1,71 @@
+digraph filtergraph {
+  
+  # input streams
+  node [shape=box,style=bold];
+  video_input;
+  chat_color_input;
+  chat_mask_input;
+
+  # temporary streams
+  node [style=solid];
+  chat;
+  background;
+  border;
+  tmp_1 [label="tmp 1"];
+  tmp_2 [label="tmp 2"];
+
+  # images
+  node [style=dotted];
+  chat_background;
+  chat_border;
+
+  # output stream
+  node [style=bold];
+  output;
+
+  # filter
+  node [shape=ellipse, style=solid];
+  alphamerge_1 [label="alphamerge 1"];
+  pad_1 [label="pad 1"];
+  pad_2 [label="pad 2"];
+  pad_3 [label="pad 3"];
+  overlay_1 [label="overlay 1"];
+  overlay_2 [label="overlay 2"];
+  overlay_3 [label="overlay 3"];
+
+  # chat background padding
+  edge [color=blue];
+  chat_background -> pad_1;
+  pad_1 -> background;
+
+  # masked alpha and padding for chat
+  edge [color=red];
+  chat_color_input -> alphamerge_1 [label=1];
+  chat_mask_input -> alphamerge_1 [label=2];
+  alphamerge_1 -> pad_2;
+  pad_2 -> chat;
+
+  # chat border padding
+  edge [color=green];
+  chat_border -> pad_3;
+  pad_3 -> border;
+
+  # overlay chat background
+  edge [color=orange];
+  video_input -> overlay_1 [label=1];
+  background -> overlay_1 [label=2];
+  overlay_1 -> tmp_1;
+
+  # overlay chat on top of background
+  edge [color=magenta];
+  tmp_1 -> overlay_2 [label=1];
+  chat -> overlay_2 [label=2];
+  overlay_2 -> tmp_2;
+
+  # overlay border on top of chat
+  edge [color=teal];
+  tmp_2 -> overlay_3 [label=1];
+  border -> overlay_3 [label=2];
+  overlay_3 -> output;
+
+}
