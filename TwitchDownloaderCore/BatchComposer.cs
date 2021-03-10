@@ -8,19 +8,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchDownloaderCore.Options;
+using static TwitchDownloaderCore.FfmpegHelper;
 
 namespace TwitchDownloaderCore
 {
 
     public class BatchComposer
     {
-        private struct ImageDimension
-        {
-            public int Width { get; set; }
-            
-            public int Height { get; set; }
-
-        }
 
         readonly BatchComposerOptions batchComposerOptions;
 
@@ -69,19 +63,35 @@ namespace TwitchDownloaderCore
         private async Task ComposeVideoWithChatOverlay(IProgress<ProgressReport> progress, string videoOutputPath, string chatOutputPath, string chatMaskOutputPath, CancellationToken cancellationToken)
         {
 
-            ImageDimension videoDimension = await GetVideoDimensionAsync(progress, videoOutputPath, cancellationToken);
+            ImageDimension videoDimension = await GetVideoDimensionAsync(videoOutputPath, batchComposerOptions.FfmpegPath);
+
+            MappedInputs mappedInputs = BuildMappedInputs(videoOutputPath, chatOutputPath, chatMaskOutputPath, batchComposerOptions.ChatBackgroundImage, batchComposerOptions.ChatBorderImage);
+
+            string filtergraph = BuildFiltergraph(
+                batchComposerOptions.ChatBackgroundImage != null,
+                batchComposerOptions.ChatBorderImage != null,
+                videoDimension.Width,
+                videoDimension.Height,
+                batchComposerOptions.ChatPosLeft,
+                batchComposerOptions.ChatPosTop
+            );
 
             string composerArgs = batchComposerOptions.ComposerArgs
                 .Replace("{video}", videoOutputPath)
                 .Replace("{chat}", chatOutputPath)
                 .Replace("{chat_mask}", chatMaskOutputPath)
-                .Replace("{save_path}", batchComposerOptions.Filename)
                 .Replace("{border}", batchComposerOptions.ChatBorderImage)
                 .Replace("{background}", batchComposerOptions.ChatBackgroundImage)
+                .Replace("{input_files}", mappedInputs.Inputs)
+                .Replace("{input_mappings}", mappedInputs.Mappings)
+                .Replace("{filtergraph}", filtergraph)
+                .Replace("{save_path}", batchComposerOptions.Filename)
                 .Replace("{chat_top}", batchComposerOptions.ChatPosTop.ToString())
                 .Replace("{chat_left}", batchComposerOptions.ChatPosLeft.ToString())
                 .Replace("{video_width}", videoDimension.Width.ToString())
                 .Replace("{video_height}", videoDimension.Height.ToString());
+
+            Console.WriteLine(composerArgs);
 
             var process = new Process
             {
@@ -123,62 +133,6 @@ namespace TwitchDownloaderCore
             {
                 process.Close();
             }
-        }
-
-        private async Task<ImageDimension> GetVideoDimensionAsync(IProgress<ProgressReport> progress, string videoOutputFile, CancellationToken cancellationToken)
-        {
-            ImageDimension imageDimension = new ImageDimension { Width = 1920, Height = 1080 };
-
-            using (var process = new Process
-            {
-                StartInfo =
-                    {
-                        FileName = batchComposerOptions.FfmpegPath,
-                        Arguments = $"-v info -i \"{videoOutputFile}\" -f ffmetadata -",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardInput = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                    }
-            })
-            {
-                try
-                {
-
-                    process.Start();
-                    process.BeginOutputReadLine();
-
-                    Regex regex = new Regex("^\\s*Stream #0:.*Video:.*, ([0-9]+)x([0-9]+)( \\[.*\\])?, .*$", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.Multiline);
-
-                    while (!process.StandardError.EndOfStream)
-                    {
-                        string line = process.StandardError.ReadLine();
-                        Match match = regex.Match(line);
-
-                        if (match.Success)
-                        {
-                            imageDimension.Width = int.Parse(match.Groups[1].Value);
-                            imageDimension.Height = int.Parse(match.Groups[2].Value);
-                        }
-
-                    }
-
-                    process.WaitForExit();
-
-                }
-                catch
-                {
-                    process.Kill();
-                    throw;
-                }
-                finally
-                {
-                    process.Close();
-                }
-            }
-
-            return await Task.FromResult(imageDimension);
         }
 
         private ChatRenderOptions GetChatRendererOptions(BatchComposerOptions batchCompositionOptions, string chatJsonOutputPath, string chatOutputPath)

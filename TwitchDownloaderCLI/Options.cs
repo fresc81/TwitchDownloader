@@ -84,7 +84,7 @@ namespace TwitchDownloaderCLI
         public string InputArgs { get; set; }
         [Option("output-args", Default = "-c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p \"{save_path}\"", HelpText = "Output arguments for ffmpeg chat render.")]
         public string OutputArgs { get; set; }
-        [Option("composer-args", Default = "-i \"{video}\" -i \"{chat}\" -i \"{chat_mask}\" -i \"{border}\" -i \"{background}\" -map 0:a -c:a copy -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -filter_complex \"[1:v][2:v]alphamerge,pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[chat];[4:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[background];[0:v][background]overlay[pre];[pre][chat]overlay[video];[3:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[border];[video][border]overlay\" -y \"{save_path}\"", HelpText = "Arguments for ffmpeg batch composition.")]
+        [Option("composer-args", Default = "{input_files} -map 0:a -c:a copy -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -filter_complex \"{input_mappings} {filtergraph}\" -map \"[output]\" -y \"{save_path}\"", HelpText = "Arguments for ffmpeg batch composition.")]
         public string ComposerArgs { get; set; }
         [Option("download-ffmpeg", Required = false, HelpText = "Downloads ffmpeg and exits.")]
         public bool DownloadFfmpeg { get; set; }
