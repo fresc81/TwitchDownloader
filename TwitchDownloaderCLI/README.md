@@ -149,9 +149,8 @@ Path to a transparent PNG image used as background for chat. This image is drawn
 Arguments for ffmpeg batch composition.
 Default:
 
-    -i "{video}" -i "{chat}" -i "{chat_mask}" -i "{border}" -i "{background}" -map 0:a -c:a copy -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -filter_complex "[1:v][2:v]alphamerge,pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[chat];[4:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[background];[0:v][background]overlay[pre];[pre][chat]overlay[video];[3:v]pad={video_width}:{video_height}:{chat_left}:{chat_top}:0x00000000[border];[video][border]overlay" -y "{save_path}"
-
-The ffmpeg filtergraph looks quite complex but easy to understand with an image:
+    {input_files} -map 0:a -c:a copy -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -filter_complex "{input_mappings} {filtergraph}" -map "[output]" -y "{save_path}"
+The ffmpeg filtergraph is quite complex but easier to understand with an image:
 
 ![](Docs/filtergraph.png)
 
