@@ -317,6 +317,7 @@ namespace TwitchDownloaderCLI
             batchComposerOptions.ComposerArgs = inputOptions.ComposerArgs;
             batchComposerOptions.ChatPosLeft = inputOptions.ChatPosLeft;
             batchComposerOptions.ChatPosTop = inputOptions.ChatPosTop;
+            batchComposerOptions.KeepIntermediate = inputOptions.KeepIntermediate;
 
             BatchComposer batchComposer = new BatchComposer(batchComposerOptions);
             Progress<ProgressReport> progress = new Progress<ProgressReport>();

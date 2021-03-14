@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using TwitchDownloaderCore.Options;
@@ -23,25 +19,39 @@ namespace TwitchDownloaderCore
             batchComposerOptions = BatchCompositionOptions;
         }
 
+        private static bool IsVideoId(string id)
+        {
+            return int.TryParse(id, out _);
+        }
+
         public async Task ComposeAsync(IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
+            string[] intermediateFiles = null;
             try
             {
-                //VideoDownloader videoDownloader = new VideoDownloader(GetVideoDownloaderOptions(batchComposerOptions));
-                //await videoDownloader.DownloadAsync(progress, cancellationToken);
-
                 string finalVideoOutputPath = batchComposerOptions.Filename;
 
                 string outputDirectory = Path.GetDirectoryName(finalVideoOutputPath);
                 string outputFilename = Path.GetFileNameWithoutExtension(finalVideoOutputPath);
+                string outputExtension = Path.GetExtension(finalVideoOutputPath);
 
-                string videoOutputPath = $"{outputDirectory}\\{outputFilename}_raw.mp4";
+                string videoOutputPath = $"{outputDirectory}\\{outputFilename}_raw{outputExtension}";
                 string chatJsonOutputPath = $"{outputDirectory}\\{outputFilename}_chat.json";
-                string chatOutputPath = $"{outputDirectory}\\{outputFilename}_chat.mp4";
-                string chatMaskOutputPath = $"{outputDirectory}\\{outputFilename}_chat_mask.mp4";
+                string chatOutputPath = $"{outputDirectory}\\{outputFilename}_chat{outputExtension}";
+                string chatMaskOutputPath = $"{outputDirectory}\\{outputFilename}_chat_mask{outputExtension}";
+                
+                intermediateFiles = new string[] { videoOutputPath, chatJsonOutputPath, chatOutputPath, chatMaskOutputPath };
 
-                ClipDownloader clipDownloader = new ClipDownloader(GetClipDownloaderOptions(batchComposerOptions, videoOutputPath));
-                await clipDownloader.DownloadAsync();
+                if (IsVideoId(batchComposerOptions.Id))
+                {
+                    VideoDownloader videoDownloader = new VideoDownloader(GetVideoDownloaderOptions(batchComposerOptions, videoOutputPath));
+                    await videoDownloader.DownloadAsync(progress, cancellationToken);
+                }
+                else
+                {
+                    ClipDownloader clipDownloader = new ClipDownloader(GetClipDownloaderOptions(batchComposerOptions, videoOutputPath));
+                    await clipDownloader.DownloadAsync();
+                }
 
                 ChatDownloader chatDownloader = new ChatDownloader(GetChatDownloaderOptions(batchComposerOptions, chatJsonOutputPath));
                 await chatDownloader.DownloadAsync(progress, cancellationToken);
@@ -51,11 +61,11 @@ namespace TwitchDownloaderCore
 
                 await ComposeVideoWithChatOverlay(progress, videoOutputPath, chatOutputPath, chatMaskOutputPath, cancellationToken);
 
-                Cleanup();
+                Cleanup(intermediateFiles);
 
             } catch
             {
-                Cleanup();
+                Cleanup(intermediateFiles);
                 throw;
             }
         }
@@ -90,8 +100,6 @@ namespace TwitchDownloaderCore
                 .Replace("{chat_left}", batchComposerOptions.ChatPosLeft.ToString())
                 .Replace("{video_width}", videoDimension.Width.ToString())
                 .Replace("{video_height}", videoDimension.Height.ToString());
-
-            Console.WriteLine(composerArgs);
 
             var process = new Process
             {
@@ -200,14 +208,41 @@ namespace TwitchDownloaderCore
             return downloadOptions;
         }
 
-        private VideoDownloadOptions GetVideoDownloaderOptions(BatchComposerOptions batchCompositionOptions)
+        private VideoDownloadOptions GetVideoDownloaderOptions(BatchComposerOptions batchCompositionOptions, string videoOutputPath)
         {
-            throw new NotImplementedException();
+            VideoDownloadOptions downloadOptions = new VideoDownloadOptions
+            {
+                Id = int.Parse(batchCompositionOptions.Id),
+                Filename = videoOutputPath,
+                Quality = batchCompositionOptions.Quality,
+                CropBeginning = batchComposerOptions.CropBeginning,
+                CropBeginningTime = batchComposerOptions.CropBeginningTime,
+                CropEnding = batchComposerOptions.CropEnding,
+                CropEndingTime = batchComposerOptions.CropEndingTime,
+                DownloadThreads = batchComposerOptions.DownloadThreads,
+                FfmpegPath = batchComposerOptions.FfmpegPath,
+                Oauth = batchComposerOptions.Oauth,
+                PlaylistUrl = batchComposerOptions.PlaylistUrl,
+                TempFolder = batchComposerOptions.TempFolder
+            };
+
+            return downloadOptions;
         }
 
-        private void Cleanup()
+        private void Cleanup(string[] intermediateFiles)
         {
-            
+            if (!batchComposerOptions.KeepIntermediate)
+            {
+
+                if (intermediateFiles != null)
+                {
+                    foreach (var intermediateFile in intermediateFiles)
+                    {
+                        File.Delete(intermediateFile);
+                    }
+                }
+
+            }
         }
     }
 }

@@ -30,6 +30,6 @@ namespace TwitchDownloaderCore.Options
 
         public string ComposerArgs { get; set; }
 
-
+        public bool KeepIntermediate { get; set; }
     }
 }

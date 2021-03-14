@@ -92,5 +92,7 @@ namespace TwitchDownloaderCLI
         public string FfmpegPath { get; set; }
         [Option("temp-path", Default = "", HelpText = "Path to temporary folder to use for cache.")]
         public string TempFolder { get; set; }
+        [Option('k', "keep-intermediate", Default = false, HelpText = "Keep the intermediate files produced during batch composition.")]
+        public bool KeepIntermediate { get; set; }
     }
 }
