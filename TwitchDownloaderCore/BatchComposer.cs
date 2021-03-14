@@ -44,19 +44,19 @@ namespace TwitchDownloaderCore
 
                 if (IsVideoId(batchComposerOptions.Id))
                 {
-                    VideoDownloader videoDownloader = new VideoDownloader(GetVideoDownloaderOptions(batchComposerOptions, videoOutputPath));
+                    VideoDownloader videoDownloader = new VideoDownloader(GetVideoDownloaderOptions(videoOutputPath));
                     await videoDownloader.DownloadAsync(progress, cancellationToken);
                 }
                 else
                 {
-                    ClipDownloader clipDownloader = new ClipDownloader(GetClipDownloaderOptions(batchComposerOptions, videoOutputPath));
+                    ClipDownloader clipDownloader = new ClipDownloader(GetClipDownloaderOptions(videoOutputPath));
                     await clipDownloader.DownloadAsync();
                 }
 
-                ChatDownloader chatDownloader = new ChatDownloader(GetChatDownloaderOptions(batchComposerOptions, chatJsonOutputPath));
+                ChatDownloader chatDownloader = new ChatDownloader(GetChatDownloaderOptions(chatJsonOutputPath));
                 await chatDownloader.DownloadAsync(progress, cancellationToken);
 
-                ChatRenderer chatRenderer = new ChatRenderer(GetChatRendererOptions(batchComposerOptions, chatJsonOutputPath, chatOutputPath));
+                ChatRenderer chatRenderer = new ChatRenderer(GetChatRendererOptions(chatJsonOutputPath, chatOutputPath));
                 await chatRenderer.RenderVideoAsync(progress, cancellationToken);
 
                 await ComposeVideoWithChatOverlay(progress, videoOutputPath, chatOutputPath, chatMaskOutputPath, cancellationToken);
@@ -143,22 +143,22 @@ namespace TwitchDownloaderCore
             }
         }
 
-        private ChatRenderOptions GetChatRendererOptions(BatchComposerOptions batchCompositionOptions, string chatJsonOutputPath, string chatOutputPath)
+        private ChatRenderOptions GetChatRendererOptions(string chatJsonOutputPath, string chatOutputPath)
         {
             ChatRenderOptions renderOptions = new ChatRenderOptions
             {
                 InputFile = chatJsonOutputPath,
                 OutputFile = chatOutputPath,
-                BackgroundColor = batchCompositionOptions.BackgroundColor,
-                MessageColor = batchCompositionOptions.MessageColor,
-                ChatHeight = batchCompositionOptions.ChatHeight,
-                ChatWidth = batchCompositionOptions.ChatWidth,
-                BttvEmotes = batchCompositionOptions.BttvEmotes,
-                FfzEmotes = batchCompositionOptions.FfzEmotes,
-                Outline = batchCompositionOptions.Outline,
-                OutlineSize = batchCompositionOptions.OutlineSize,
-                Font = batchCompositionOptions.Font,
-                FontSize = batchCompositionOptions.FontSize,
+                BackgroundColor = batchComposerOptions.BackgroundColor,
+                MessageColor = batchComposerOptions.MessageColor,
+                ChatHeight = batchComposerOptions.ChatHeight,
+                ChatWidth = batchComposerOptions.ChatWidth,
+                BttvEmotes = batchComposerOptions.BttvEmotes,
+                FfzEmotes = batchComposerOptions.FfzEmotes,
+                Outline = batchComposerOptions.Outline,
+                OutlineSize = batchComposerOptions.OutlineSize,
+                Font = batchComposerOptions.Font,
+                FontSize = batchComposerOptions.FontSize,
 
                 MessageFontStyle = batchComposerOptions.MessageFontStyle,
                 UsernameFontStyle = batchComposerOptions.UsernameFontStyle,
@@ -176,17 +176,17 @@ namespace TwitchDownloaderCore
             return renderOptions;
         }
 
-        private ChatDownloadOptions GetChatDownloaderOptions(BatchComposerOptions batchCompositionOptions, string chatJsonOutputPath)
+        private ChatDownloadOptions GetChatDownloaderOptions(string chatJsonOutputPath)
         {
             ChatDownloadOptions downloadOptions = new ChatDownloadOptions
             {
                 IsJson = true,
-                Id = batchCompositionOptions.Id.ToString(),
-                CropBeginning = batchCompositionOptions.CropBeginning,
-                CropBeginningTime = batchCompositionOptions.CropBeginningTime,
-                CropEnding = batchCompositionOptions.CropEnding,
-                CropEndingTime = batchCompositionOptions.CropEndingTime,
-                Timestamp = batchCompositionOptions.Timestamp,
+                Id = batchComposerOptions.Id.ToString(),
+                CropBeginning = batchComposerOptions.CropBeginning,
+                CropBeginningTime = batchComposerOptions.CropBeginningTime,
+                CropEnding = batchComposerOptions.CropEnding,
+                CropEndingTime = batchComposerOptions.CropEndingTime,
+                Timestamp = batchComposerOptions.Timestamp,
 
                 EmbedEmotes = true, // TODO nessesary?
 
@@ -196,25 +196,25 @@ namespace TwitchDownloaderCore
             return downloadOptions;
         }
 
-        private ClipDownloadOptions GetClipDownloaderOptions(BatchComposerOptions batchCompositionOptions, string videoOutputPath)
+        private ClipDownloadOptions GetClipDownloaderOptions(string videoOutputPath)
         {
             ClipDownloadOptions downloadOptions = new ClipDownloadOptions
             {
-                Id = batchCompositionOptions.Id.ToString(),
+                Id = batchComposerOptions.Id.ToString(),
                 Filename = videoOutputPath,
-                Quality = batchCompositionOptions.Quality
+                Quality = batchComposerOptions.Quality
             };
 
             return downloadOptions;
         }
 
-        private VideoDownloadOptions GetVideoDownloaderOptions(BatchComposerOptions batchCompositionOptions, string videoOutputPath)
+        private VideoDownloadOptions GetVideoDownloaderOptions(string videoOutputPath)
         {
             VideoDownloadOptions downloadOptions = new VideoDownloadOptions
             {
-                Id = int.Parse(batchCompositionOptions.Id),
+                Id = int.Parse(batchComposerOptions.Id),
                 Filename = videoOutputPath,
-                Quality = batchCompositionOptions.Quality,
+                Quality = batchComposerOptions.Quality,
                 CropBeginning = batchComposerOptions.CropBeginning,
                 CropBeginningTime = batchComposerOptions.CropBeginningTime,
                 CropEnding = batchComposerOptions.CropEnding,
