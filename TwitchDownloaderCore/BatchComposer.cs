@@ -83,13 +83,15 @@ namespace TwitchDownloaderCore
                 videoDimension.Width,
                 videoDimension.Height,
                 batchComposerOptions.ChatPosLeft,
-                batchComposerOptions.ChatPosTop
+                batchComposerOptions.ChatPosTop,
+                batchComposerOptions.Framerate
             );
 
             string composerArgs = batchComposerOptions.ComposerArgs
                 .Replace("{video}", videoOutputPath)
                 .Replace("{chat}", chatOutputPath)
                 .Replace("{chat_mask}", chatMaskOutputPath)
+                .Replace("{fps}", batchComposerOptions.Framerate.ToString())
                 .Replace("{border}", batchComposerOptions.ChatBorderImage)
                 .Replace("{background}", batchComposerOptions.ChatBackgroundImage)
                 .Replace("{input_files}", mappedInputs.Inputs)

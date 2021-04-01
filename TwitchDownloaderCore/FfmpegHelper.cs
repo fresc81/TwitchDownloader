@@ -91,7 +91,7 @@ namespace TwitchDownloaderCore
             return new MappedInputs { Inputs = sbInputs.ToString(), Mappings = sbMappings.ToString() };
         }
 
-        public static string BuildFiltergraph(bool hasBackground, bool hasBorder, int width, int height, int chatX, int chatY)
+        public static string BuildFiltergraph(bool hasBackground, bool hasBorder, int width, int height, int chatX, int chatY, int fps)
         {
             string padding = $"{width}:{height}:{chatX}:{chatY}:0x00000000";
             
@@ -182,7 +182,8 @@ namespace TwitchDownloaderCore
                 },
                 Filters = new List<string>
                 {
-                    "overlay"
+                    "overlay",
+                    $"fps={fps}" // harmonize framerate
                 },
                 Outputs = new List<string>
                 {
