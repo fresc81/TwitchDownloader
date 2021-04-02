@@ -2,6 +2,10 @@
   "profiles": {
     "TwitchDownloaderCLI": {
       "commandName": "Project"
+    },
+    "Test Composition": {
+      "commandName": "Project",
+      "commandLineArgs": "-m BatchCompose -u \"InspiringSecretiveRabbitOMGScoots-SA3PG_d9MMVXGeqY\" --border-image \"C:\\Users\\Paul\\Projekte\\TwitchDownloaderData\\border_wood_fg.png\" --background-image \"C:\\Users\\Paul\\Projekte\\TwitchDownloaderData\\border_wood_bg.png\" -o \"C:\\Users\\Paul\\Projekte\\TwitchDownloaderData\\output\\sadge_world.mp4\" --embed-emotes --background-color \"#00000000\" -h 550 -w 350 -x 880 -y 30 --bttv --ffz --outline --outline-size 3 --padding-left 20 -f \"Segoe UI Emoji\" --font-size 14 --generate-mask --framerate 60 --ffmpeg-path \"C:\\Users\\Paul\\Projekte\\TwitchDownloaderData\\ffmpeg.exe\""
     }
   }
 }

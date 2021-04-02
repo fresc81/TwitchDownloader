@@ -35,11 +35,11 @@ namespace TwitchDownloaderCore
                 string outputFilename = Path.GetFileNameWithoutExtension(finalVideoOutputPath);
                 string outputExtension = Path.GetExtension(finalVideoOutputPath);
 
-                string videoOutputPath = $"{outputDirectory}\\{outputFilename}_raw{outputExtension}";
-                string chatJsonOutputPath = $"{outputDirectory}\\{outputFilename}_chat.json";
-                string chatOutputPath = $"{outputDirectory}\\{outputFilename}_chat{outputExtension}";
-                string chatMaskOutputPath = $"{outputDirectory}\\{outputFilename}_chat_mask{outputExtension}";
-                
+                string videoOutputPath = $"{outputDirectory}{Path.DirectorySeparatorChar}{outputFilename}_raw{outputExtension}";
+                string chatJsonOutputPath = $"{outputDirectory}{Path.DirectorySeparatorChar}{outputFilename}_chat.json";
+                string chatOutputPath = $"{outputDirectory}{Path.DirectorySeparatorChar}{outputFilename}_chat{outputExtension}";
+                string chatMaskOutputPath = $"{outputDirectory}{Path.DirectorySeparatorChar}{outputFilename}_chat_mask{outputExtension}";
+
                 intermediateFiles = new string[] { videoOutputPath, chatJsonOutputPath, chatOutputPath, chatMaskOutputPath };
 
                 if (IsVideoId(batchComposerOptions.Id))
